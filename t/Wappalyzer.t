@@ -122,7 +122,7 @@ eval { WWW::Wappalyzer::detect(
     html => 1,
     headers => { key => { 1 => 2 } },
 ) };
-like $@, qr/Bad header/;
+ok !$@, 'header skip hashes';
 
 %detected = WWW::Wappalyzer::detect( headers => { 'seT-Cookie' => 'C' } );
 is_deeply \%detected, { parkings => [ 'header-value-test' ] }, 'header single value';

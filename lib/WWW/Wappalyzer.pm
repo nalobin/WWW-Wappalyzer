@@ -43,11 +43,12 @@ our $VERSION = '0.21';
 
     use WWW::Wappalyzer;
     use LWP::UserAgent;
+    use List::Util 'pairmap';
 
     my $response = LWP::UserAgent->new->get( 'http://www.drupal.org' );
     my %detected = WWW::Wappalyzer::detect(
         html    => $response->decoded_content,
-        headers => $response->headers,
+        headers => { pairmap { $a => [ $response->headers->header($a) ] } $response->headers->flatten },
     );
 
     # %detected = (
@@ -74,7 +75,7 @@ Available parameters:
 
     html    - HTML code of web page.
 
-    headers - Hash ref to http headers list. The svalue may be a plain string or a array ref 
+    headers - Hash ref to http headers list. The value may be a plain string or a array ref 
               of strings for a multi-valued field.
 
     url     - URL of web page.
@@ -116,7 +117,7 @@ sub detect {
                 $header_vals_ref = [ $header_vals_ref ];
             }
             elsif ( ref $header_vals_ref ne 'ARRAY' ) {
-                die "Bad header $header value";
+                next;
             }
 
             $headers_ref->{ lc $header } = [ map { lc } @$header_vals_ref ];
