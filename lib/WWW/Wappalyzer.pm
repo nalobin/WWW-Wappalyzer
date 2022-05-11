@@ -16,8 +16,13 @@ my @_clues_file_list = ( lib::abs::path( './apps.json' )  );
 
 # List of multi per web page application categories
 my %MULTIPLE_APP_CATS = map { $_ => 1 } qw( 
-    widgets analytics javascript-frameworks video-players
-    font-scripts miscellaneous advertising-networks payment-processors
+    widgets analytics
+    javascript-frameworks
+    video-players
+    font-scripts
+    miscellaneous
+    advertising-networks
+    payment-processors
 );
 
 =head1 NAME
@@ -31,13 +36,13 @@ web servers, JavaScript frameworks, analytics tools and many more.
 
 Lacks 'version', 'implies', 'excludes' support of original Wappalyzer in favour of speed.
 
-Clues:      L<https://github.com/AliasIO/Wappalyzer/blob/master/src/apps.json>
-
-More info on Wappalyzer:  L<https://github.com/AliasIO/Wappalyzer>
+Categories: L<https://github.com/wappalyzer/wappalyzer/blob/master/src/categories.json>
+Clues:      L<https://github.com/wappalyzer/wappalyzer/tree/master/src/technologies>
+More info on Wappalyzer:  L<https://github.com/wappalyzer/wappalyzer>
 
 =cut
 
-our $VERSION = '0.21';
+our $VERSION = '0.30';
 
 =head1 SYNOPSIS
 
