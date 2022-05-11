@@ -14,9 +14,10 @@ use Regexp::Parser;
 my %_categories;
 my @_clues_file_list = ( lib::abs::path( './apps.json' )  );
 
-# List of multi per web page application categories
+# List of multi per-page application categories
 my %MULTIPLE_APP_CATS = map { $_ => 1 } qw( 
-    widgets analytics
+    widgets
+    analytics
     javascript-frameworks
     video-players
     font-scripts
