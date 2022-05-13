@@ -1,6 +1,6 @@
 Revision history for WWW-Wappalyzer
 
-1.00    11 May 2022 Alexander Nalobin
+2.00    11 May 2022 Alexander Nalobin
         Support recent version of Wappalyzer https://github.com/wappalyzer/wappalyzer/releases/tag/v6.10.26.
         This release breaks backward compatibility. Refer to updated POD of module.
 
