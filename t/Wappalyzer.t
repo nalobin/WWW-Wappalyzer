@@ -2,13 +2,16 @@
 
 use utf8;
 use FindBin qw($Bin);
-use Test::More tests => 17;
+use Test::More tests => 20;
 
 BEGIN {
     use_ok( 'WWW::Wappalyzer' ) || print "Bail out!\n";
 }
 
-my @cats = WWW::Wappalyzer::get_categories_names();
+ok my $wappalyzer = WWW::Wappalyzer->new;
+ok $wappalyzer->isa( WWW::Wappalyzer );
+
+my @cats = $wappalyzer->get_categories_names();
 ok scalar @cats, 'get_categories_names';
 ok scalar( grep { $_ eq 'CMS' } @cats ), 'get_categories_names cms';
 
@@ -27,7 +30,7 @@ my $html = q{<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "htt
   <script type="text/javascript" src="/media/system/js/jquery.1.5.4.js"></script>
   <script type="text/javascript" src="/media/system/js/caption.js"></script>};
 
-my %detected = WWW::Wappalyzer::detect(
+my %detected = $wappalyzer->detect(
     html     => $html,
     headers  => {
         Server => 'nginx',
@@ -43,16 +46,16 @@ is_deeply \%detected, {
     'Hosting panels'        => [ 'Plesk'  ],
 }, 'detect by html & headers';
 
-%detected = WWW::Wappalyzer::detect( url => 'http://myblog.livejournal.com' );
+%detected = $wappalyzer->detect( url => 'http://myblog.livejournal.com' );
 is_deeply \%detected, { Blogs => [ 'LiveJournal' ] }, 'detect by url';
 
-%detected = WWW::Wappalyzer::detect(
+%detected = $wappalyzer->detect(
     headers  => { Server => 'nginx' },
     cats => [ 'Web servers' ],
 );
 is_deeply \%detected, { 'Web servers' => [ 'Nginx' ] }, 'detect single cat';
 
-%detected = WWW::Wappalyzer::detect(
+%detected = $wappalyzer->detect(
     html => q{<link href="./dist/css/bootstrap.css" rel="stylesheet">},
     cats => [ 'UI frameworks' ],
 );
@@ -65,12 +68,12 @@ var rls = {b1: {position: '1',use_from: '0',start: '0',end: '9',amount: '10',typ
 <a class="ad_sense_help" href="https://www.google.com/adsense/support/bin/request.py?
 };
 
-%detected = WWW::Wappalyzer::detect( html => $html );
+%detected = $wappalyzer->detect( html => $html );
 is_deeply \%detected, {}, 'detect before add techs file';
-WWW::Wappalyzer::add_categories_files( "$Bin/add_categories.json" );
-WWW::Wappalyzer::add_technologies_files( "$Bin/add_techs.json" );
+$wappalyzer->add_categories_files( "$Bin/add_categories.json" );
+$wappalyzer->add_technologies_files( "$Bin/add_techs.json" );
 
-%detected = WWW::Wappalyzer::detect(
+%detected = $wappalyzer->detect(
     html => $html,
     headers  => { Server => 'nginx' },
 );
@@ -84,8 +87,8 @@ is_deeply
     'detect after add files'
 ;
 
-WWW::Wappalyzer::reload_files();
-%detected = WWW::Wappalyzer::detect(
+$wappalyzer->reload_files();
+%detected = $wappalyzer->detect(
     html => $html,
     headers  => { Server => 'nginx' },
 );
@@ -99,7 +102,26 @@ is_deeply
     'detect still works after reload files'
 ;
 
-%detected = WWW::Wappalyzer::detect(
+$wappalyzer = WWW::Wappalyzer->new(
+    categories => [ "$Bin/add_categories.json" ],
+    technologies => [ "$Bin/add_techs.json" ],
+);
+
+%detected = $wappalyzer->detect(
+    html => $html,
+    headers  => { Server => 'nginx' },
+);
+is_deeply
+    \%detected,
+    {
+        Parkings          => [ 'sedoparking' ],
+        'Web servers'     => [ 'Nginx' ],
+        'Reverse proxies' => [ 'Nginx' ]
+    },
+    'detect works when add files in constructor'
+;
+
+%detected = $wappalyzer->detect(
     html => 'aaa { bbb',
 );
 is_deeply \%detected, { Parkings => [ 'open_curly_bracket' ] }, 'detect open curly bracket';
@@ -114,7 +136,7 @@ $html = q{
 <TITLE>SALVADOR регистрация доменов RU,COM,NET,ORG,etc,...</TITLE>
 };
 
-%detected = WWW::Wappalyzer::detect(
+%detected = $wappalyzer->detect(
     html => $html,
     headers  => { Server => 'nginx' },
 );
@@ -135,7 +157,7 @@ $html .= q{
 <LINK REL="SHORTCUT ICON" href="/favicon.ico">
 };
 
-%detected = WWW::Wappalyzer::detect(
+%detected = $wappalyzer->detect(
     html => $html,
     headers  => { Server => 'nginx' },
 );
@@ -148,20 +170,20 @@ is_deeply
      },
      'detect parking with confidence, 100% found';
 
-eval { WWW::Wappalyzer::detect(
+eval { $wappalyzer->detect(
     html => 1,
     headers => 'bad',
 ) };
 like $@, qr/Bad headers/;
 
-eval { WWW::Wappalyzer::detect(
+eval { $wappalyzer->detect(
     html => 1,
     headers => { key => { 1 => 2 } },
 ) };
 ok !$@, 'header skip hashes';
 
-%detected = WWW::Wappalyzer::detect( headers => { 'seT-Cookie' => 'C' } );
+%detected = $wappalyzer->detect( headers => { 'seT-Cookie' => 'C' } );
 is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header single value';
 
-%detected = WWW::Wappalyzer::detect( headers => { 'Set-Cookie' => [ 'a', 'b', 'c' ] } );
+%detected = $wappalyzer->detect( headers => { 'Set-Cookie' => [ 'a', 'b', 'c' ] } );
 is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header multi value';
