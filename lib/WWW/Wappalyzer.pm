@@ -5,15 +5,18 @@ use strict;
 use warnings;
 
 use base qw ( Exporter );
-our @EXPORT_OK = qw( detect get_categories_names add_categories_file add_techs_file );
+our @EXPORT_OK = qw( detect get_categories_names add_categories_files add_technologies_files );
 
 use lib::abs;
 use JSON qw();
 use Regexp::Parser;
 
 my %_categories;
-my @_techs_file_list = ( glob lib::abs::path( './wappalyzer_src/technologies' ) . '/*.json'  );
-my @_cats_file_list = ( lib::abs::path( './wappalyzer_src/categories.json' ) );
+my @_cats_file_list;
+my @_techs_file_list;
+
+add_categories_files( lib::abs::path( './wappalyzer_src/categories.json' ) );
+add_technologies_files( glob lib::abs::path( './wappalyzer_src/technologies' ) . '/*.json'  );
 
 # List of multi per-page application categories names
 my %MULTIPLE_APP_CATS = map { $_ => 1 } (
@@ -431,37 +434,37 @@ sub _optimize_rules {
     return $rules;
 }
 
-=head2 add_categories_file
+=head2 add_categories_files
 
-    add_categories_file( $filepath )
+    add_categories_files( @filepaths )
 
-Puts additional categories file to a list of processed categories files.
+Puts additional categories files to a list of processed categories files.
 See lib/WWW/wappalyzer_src/categories.json as format sample.
 
 =cut
 
-sub add_categories_file {
-    my ( $filepath ) = @_;
+sub add_categories_files {
+    my @filepaths = @_;
 
-    push @_cats_file_list, $filepath;
+    push @_cats_file_list, @filepaths;
 
     # just clear out categories to lazy load later
     %_categories = ();
 }
 
-=head2 add_techs_file
+=head2 add_technologies_files
 
-    add_techs_file( $filepath )
+    add_technologies_files( @filepaths )
 
-Puts additional techs file to a list of processed techs files.
+Puts additional techs files to a list of processed techs files.
 See lib/WWW/wappalyzer_src/technologies/a.json as format sample.
 
 =cut
 
-sub add_techs_file {
-    my ( $filepath ) = @_;
+sub add_technologies_files {
+    my @filepaths = @_;
 
-    push @_techs_file_list, $filepath;
+    push @_techs_file_list, @filepaths;
 
     # just clear out categories to lazy load later
     %_categories = ();

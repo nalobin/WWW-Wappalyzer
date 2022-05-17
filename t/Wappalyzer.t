@@ -67,8 +67,8 @@ var rls = {b1: {position: '1',use_from: '0',start: '0',end: '9',amount: '10',typ
 
 %detected = WWW::Wappalyzer::detect( html => $html );
 is_deeply \%detected, {}, 'detect before add techs file';
-WWW::Wappalyzer::add_categories_file( "$Bin/add_categories.json" );
-WWW::Wappalyzer::add_techs_file( "$Bin/add_techs.json" );
+WWW::Wappalyzer::add_categories_files( "$Bin/add_categories.json" );
+WWW::Wappalyzer::add_technologies_files( "$Bin/add_techs.json" );
 
 %detected = WWW::Wappalyzer::detect(
     html => $html,
