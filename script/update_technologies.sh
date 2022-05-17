@@ -14,7 +14,7 @@ TMP_DIR=`mktemp -d`
 
 cd $TMP_DIR
 
-git clone https://github.com/wappalyzer/wappalyzer.git
+git clone --depth 1 https://github.com/wappalyzer/wappalyzer.git
 
 cd wappalyzer/src
 
