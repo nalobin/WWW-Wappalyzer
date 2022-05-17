@@ -470,6 +470,21 @@ sub add_technologies_files {
     %_categories = ();
 }
 
+=head2 reload_files
+
+    reload_files()
+
+Ask to reload data from additional categories and technologies files
+those may be changed in runtime.
+
+=cut
+
+sub reload_files {
+    # just clear out categories to lazy load later
+    %_categories = ();
+}
+
+
 =head1 AUTHOR
 
 Alexander Nalobin, C<< <alexander at nalobin.ru> >>

@@ -2,7 +2,7 @@
 
 use utf8;
 use FindBin qw($Bin);
-use Test::More tests => 16;
+use Test::More tests => 17;
 
 BEGIN {
     use_ok( 'WWW::Wappalyzer' ) || print "Bail out!\n";
@@ -81,7 +81,22 @@ is_deeply
         'Web servers'     => [ 'Nginx' ],
         'Reverse proxies' => [ 'Nginx' ]
     },
-    'detect after add clues file'
+    'detect after add files'
+;
+
+WWW::Wappalyzer::reload_files();
+%detected = WWW::Wappalyzer::detect(
+    html => $html,
+    headers  => { Server => 'nginx' },
+);
+is_deeply
+    \%detected,
+    {
+        Parkings          => [ 'sedoparking' ],
+        'Web servers'     => [ 'Nginx' ],
+        'Reverse proxies' => [ 'Nginx' ]
+    },
+    'detect still works after reload files'
 ;
 
 %detected = WWW::Wappalyzer::detect(
