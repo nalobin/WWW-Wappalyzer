@@ -4,9 +4,6 @@ use 5.006;
 use strict;
 use warnings;
 
-use base qw ( Exporter );
-our @EXPORT_OK = qw( detect get_categories_names add_categories_files add_technologies_files );
-
 use lib::abs;
 use JSON qw();
 use Regexp::Parser;
