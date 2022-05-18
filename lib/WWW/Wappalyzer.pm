@@ -4,16 +4,9 @@ use 5.006;
 use strict;
 use warnings;
 
-use base qw ( Exporter );
-our @EXPORT_OK = qw( detect get_categories_names add_categories_file add_techs_file );
-
 use lib::abs;
 use JSON qw();
 use Regexp::Parser;
-
-my %_categories;
-my @_techs_file_list = ( glob lib::abs::path( './wappalyzer_src/technologies' ) . '/*.json'  );
-my @_cats_file_list = ( lib::abs::path( './wappalyzer_src/categories.json' ) );
 
 # List of multi per-page application categories names
 my %MULTIPLE_APP_CATS = map { $_ => 1 } (
@@ -60,7 +53,7 @@ our $VERSION = '2.00';
     use List::Util 'pairmap';
 
     my $response = LWP::UserAgent->new->get( 'http://www.drupal.org' );
-    my %detected = WWW::Wappalyzer::detect(
+    my %detected = WWW::Wappalyzer->new->detect(
         html    => $response->decoded_content,
         headers => { pairmap { $a => [ $response->headers->header($a) ] } $response->headers->flatten },
     );
@@ -82,9 +75,47 @@ None by default.
 
 =head1 SUBROUTINES/METHODS
 
+=head2 new
+
+    my $wappalyzer = WWW::Wappalyzer->new( %params )
+
+Constructor.
+
+Available parameters:
+
+    categories   - optional additional categories array ref to files list (refer 'add_categories_files' below)
+    technologies - optional additional technologies array ref to files list (refer 'add_technologies_files' below)
+
+Returns the instance of WWW::Wappalyzer class.
+
+=cut
+
+sub new {
+    my ( $class, %params ) = @_;
+
+    my $self = bless {
+        _categories      => {},
+        _cats_file_list  => [],
+        _techs_file_list => [],
+    }, $class;
+
+    $self->add_categories_files( lib::abs::path( './wappalyzer_src/categories.json' ) );
+    $self->add_technologies_files( glob lib::abs::path( './wappalyzer_src/technologies' ) . '/*.json'  );
+
+    if ( ref $params{categories} eq 'ARRAY' ) {
+        $self->add_categories_files( @{ $params{categories} } );
+    }
+
+    if ( ref $params{technologies} eq 'ARRAY' ) {
+        $self->add_technologies_files( @{ $params{technologies} } );
+    }
+
+    return $self;
+}
+
 =head2 detect
 
-    my %detected = detect( %params )
+    my %detected = $wappalyzer->detect( %params )
 
 Tries to detect CMS, framework, etc for given html code, http headers, URL.
 
@@ -110,7 +141,7 @@ Returns the hash of detected applications by category:
 =cut
 
 sub detect {
-    my %params = @_;
+    my ( $self, %params ) = @_;
 
     return () unless $params{html} || $params{headers} || $params{url};
     
@@ -142,15 +173,15 @@ sub detect {
     }
 
     # Lazy load and process techs from JSON file
-    _load_categories_and_techs()  unless scalar keys %_categories;
+    $self->_load_categories_and_techs  unless scalar keys %{ $self->{_categories} };
 
     my @cats = $params{cats} && ( ref( $params{cats} ) || '' ) eq 'ARRAY'
-        ? @{ $params{cats} } : get_categories_names();
+        ? @{ $params{cats} } : $self->get_categories_names;
 
     my %detected;
     my %tried_multi_cat_apps;
     for my $cat ( @cats ) {
-        my $apps_ref = $_categories{ $cat } or die "Unknown category name $cat";
+        my $apps_ref = $self->{_categories}{ $cat } or die "Unknown category name $cat";
 
         APP:
         for my $app_ref ( @$apps_ref ) {
@@ -225,28 +256,32 @@ sub detect {
 
 =head2 get_categories_names
 
-    my @cats = get_categories_names()
+    my @cats = $wappalyzer->get_categories_names()
 
 Returns the array of all application categories names.
 
 =cut
 
 sub get_categories_names {
-    # Lazy load and process categories from JSON files
-    _load_categories_and_techs() unless scalar keys %_categories;
+    my ( $self ) = @_;
 
-    return keys %_categories;
+    # Lazy load and process categories from JSON files
+    $self->_load_categories_and_techs()  unless scalar keys %{ $self->{_categories} };
+
+    return keys %{ $self->{_categories} };
 }
 
 # Loads and processes categories and techs from JSON files
 sub _load_categories_and_techs {
+    my ( $self ) = @_;
+
     my $cats_ref = {};
 
-    for my $cats_file ( @_cats_file_list ) {
+    for my $cats_file ( @{ $self->{_cats_file_list} } ) {
        $cats_ref = { %$cats_ref, %{ _load_json( $cats_file ) } };
     }
 
-    for my $techs_file ( @_techs_file_list ) {
+    for my $techs_file ( @{ $self->{_techs_file_list} } ) {
         my $apps_ref = _load_json( $techs_file );
 
         # Process apps
@@ -261,7 +296,7 @@ sub _load_categories_and_techs {
             for my $cat_id ( @cats ) {
                 my $cat = $cats_ref->{ $cat_id } or die "Bad categorie id $cat_id in app $app";
 
-                push @{ $_categories{ $cat->{name} } }, $new_app_ref;
+                push @{ $self->{_categories}{ $cat->{name} } }, $new_app_ref;
             }
         }
     }
@@ -431,41 +466,58 @@ sub _optimize_rules {
     return $rules;
 }
 
-=head2 add_categories_file
+=head2 add_categories_files
 
-    add_categories_file( $filepath )
+    $wappalyzer->add_categories_files( @filepaths )
 
-Puts additional categories file to a list of processed categories files.
+Puts additional categories files to a list of processed categories files.
 See lib/WWW/wappalyzer_src/categories.json as format sample.
 
 =cut
 
-sub add_categories_file {
-    my ( $filepath ) = @_;
+sub add_categories_files {
+    my ( $self, @filepaths ) = @_;
 
-    push @_cats_file_list, $filepath;
+    push @{ $self->{_cats_file_list} }, @filepaths;
 
     # just clear out categories to lazy load later
-    %_categories = ();
+    $self->{_categories} = {};
 }
 
-=head2 add_techs_file
+=head2 add_technologies_files
 
-    add_techs_file( $filepath )
+    $wappalyzer->add_technologies_files( @filepaths )
 
-Puts additional techs file to a list of processed techs files.
+Puts additional techs files to a list of processed techs files.
 See lib/WWW/wappalyzer_src/technologies/a.json as format sample.
 
 =cut
 
-sub add_techs_file {
-    my ( $filepath ) = @_;
+sub add_technologies_files {
+    my ( $self, @filepaths ) = @_;
 
-    push @_techs_file_list, $filepath;
+    push @{ $self->{_techs_file_list} }, @filepaths;
 
     # just clear out categories to lazy load later
-    %_categories = ();
+    $self->{_categories} = {};
 }
+
+=head2 reload_files
+
+    $wappalyzer->reload_files()
+
+Ask to reload data from additional categories and technologies files
+those may be changed in runtime.
+
+=cut
+
+sub reload_files {
+    my ( $self ) = @_;
+
+    # just clear out categories to lazy load later
+    $self->{_categories} = {};
+}
+
 
 =head1 AUTHOR
 
