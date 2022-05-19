@@ -16,5 +16,9 @@
     "header-value-test": {
         "cats": [ 1000 ],
         "headers": {  "set-cookie": "C" }
+    },
+    "cookies-test": {
+        "cats": [ 1000 ],
+        "cookies": {  "maps_routes_travel_mode": "k+[0-9]+l+" }
     }
 }
