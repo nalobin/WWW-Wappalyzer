@@ -2,7 +2,7 @@
 
 use utf8;
 use FindBin qw($Bin);
-use Test::More tests => 20;
+use Test::More tests => 21;
 
 BEGIN {
     use_ok( 'WWW::Wappalyzer' ) || print "Bail out!\n";
@@ -187,3 +187,11 @@ is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header single va
 
 %detected = $wappalyzer->detect( headers => { 'Set-Cookie' => [ 'a', 'b', 'c' ] } );
 is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header multi value';
+
+my @cookies = (
+    '_ym_d=; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
+    'maps_routes_travel_mode=kkk123lll; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
+    'skid=; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
+);
+%detected = $wappalyzer->detect( headers => { 'Set-Cookie' => \@cookies } );
+is_deeply \%detected, { Parkings => [ 'cookies-test' ] }, 'cookies';

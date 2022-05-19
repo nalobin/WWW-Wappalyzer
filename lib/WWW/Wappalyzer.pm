@@ -35,7 +35,7 @@ WWW::Wappalyzer - Perl port of Wappalyzer (https://wappalyzer.com)
 Uncovers the technologies used on websites: detects content management systems, web shops,
 web servers, JavaScript frameworks, analytics tools and many more.
 
-Supports only `scriptSrc`, `scripts`, `html`, `meta`, `headers` and `url` patterns of
+Supports only `scriptSrc`, `scripts`, `html`, `meta`, `headers`, 'cookies' and `url` patterns of
 Wappalyzer specification. Lacks 'version', 'implies', 'excludes' support in favour of speed.
 
 Categories: L<https://github.com/wappalyzer/wappalyzer/blob/master/src/categories.json>
@@ -125,6 +125,7 @@ Available parameters:
 
     headers - Hash ref to http headers list. The value may be a plain string or an array ref
               of strings for a multi-valued field.
+              Cookies should be passed in 'Set-Cookie' header.
 
     url     - URL of web page.
 
@@ -211,6 +212,26 @@ sub detect {
                                 if ( $confidence >= 100 ) {
                                     $detected = 1;
                                     last HEADER_RULE;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if ( !$detected && defined $headers_ref
+                    && ( my $cookies_header = $headers_ref->{'set-cookie'} )
+                    && exists $app_ref->{cookies_rules}
+                ) {
+                    my @cookies_rules = @{ $app_ref->{cookies_rules} };
+
+                    COOKIE_RULE:
+                    for my $rule ( @cookies_rules ) {
+                        for my $cookie_val ( @$cookies_header ) {
+                            if ( $cookie_val =~ m/$rule->{re}/ ) {
+                                $confidence += $rule->{confidence};
+                                if ( $confidence >= 100 ) {
+                                    $detected = 1;
+                                    last COOKIE_RULE;
                                 }
                             }
                         }
@@ -331,12 +352,15 @@ sub _process_app_techs {
 
     my $new_app_ref = { name => $app };
 
-    my @fields = grep { exists $app_ref->{$_} } qw( scriptSrc scripts html meta headers url );
+    my @fields = grep { exists $app_ref->{ $_ } }
+        qw( scriptSrc scripts html meta headers cookies url );
+
     my @html_rules;
+
     # Precompile regexps
     for my $field ( @fields ) {
         my $rule_ref = $app_ref->{ $field };
-        my @rules_list =   !ref $rule_ref ? _parse_rule( $rule_ref )
+        my @rules_list = !ref $rule_ref ? _parse_rule( $rule_ref )
             : ref $rule_ref eq 'ARRAY' ? ( map { _parse_rule( $_ ) } @$rule_ref )
             : () ;
 
@@ -360,7 +384,7 @@ sub _process_app_techs {
             for my $key ( keys %$rule_ref ) {
                 my $lc_key = lc $key;
                 my $name_re = qr/ name \s* = \s* ["']? $lc_key ["']? /x;
-                my $rule = _parse_rule( $rule_ref->{$key} );
+                my $rule = _parse_rule( $rule_ref->{ $key } );
                 $rule->{re} = qr/$rule->{re}/;
                 my $content_re = qr/ content \s* = \s* ["'] [^"']* (?-x:$rule->{re}) [^"']* ["'] /x;
 
@@ -377,11 +401,19 @@ sub _process_app_techs {
         }
         elsif ( $field eq 'headers' ) {
             for my $key ( keys %$rule_ref ) {
-                my $rule = _parse_rule( $rule_ref->{$key} );
+                my $rule = _parse_rule( $rule_ref->{ $key } );
                 $rule->{re} = qr/$rule->{re}/;
                 $new_app_ref->{headers_rules}{ lc $key } = $rule;
             }
         }
+        elsif ( $field eq 'cookies' ) {
+            for my $key ( keys %$rule_ref ) {
+                my $rule = _parse_rule( $rule_ref->{ $key } );
+                $rule->{re} = qr/^$key\s*=\s*$rule->{re};\s/;
+                push @{ $new_app_ref->{cookies_rules} }, $rule;
+            }
+        }
+
     }
 
     if ( @html_rules ) {
