@@ -179,6 +179,15 @@ sub detect {
     my @cats = $params{cats} && ( ref( $params{cats} ) || '' ) eq 'ARRAY'
         ? @{ $params{cats} } : $self->get_categories_names;
 
+
+    my %cookies;
+    if ( my $cookies_header = $headers_ref->{'set-cookie'} ) {
+        for my $cookie_str ( @$cookies_header ) {
+            next  unless $cookie_str =~ /^(?<name>.+?)=(?<value>.*?);\s/;
+            $cookies{ lc $+{name} } = $+{value};
+        }
+    }
+
     my %detected;
     my %tried_multi_cat_apps;
     for my $cat ( @cats ) {
@@ -218,21 +227,18 @@ sub detect {
                     }
                 }
 
-                if ( !$detected && defined $headers_ref
-                    && ( my $cookies_header = $headers_ref->{'set-cookie'} )
-                    && exists $app_ref->{cookies_rules}
-                ) {
-                    my @cookies_rules = @{ $app_ref->{cookies_rules} };
+                if ( !$detected && exists $app_ref->{cookies_rules} && scalar keys %cookies ) {
+                    my %cookies_rules = %{ $app_ref->{cookies_rules} };
 
                     COOKIE_RULE:
-                    for my $rule ( @cookies_rules ) {
-                        for my $cookie_val ( @$cookies_header ) {
-                            if ( $cookie_val =~ m/$rule->{re}/ ) {
-                                $confidence += $rule->{confidence};
-                                if ( $confidence >= 100 ) {
-                                    $detected = 1;
-                                    last COOKIE_RULE;
-                                }
+                    while ( my ( $cookie, $rule ) = each %cookies_rules ) {
+                        my $cookie_val = $cookies{ $cookie } or next;
+
+                        if ( $cookie_val =~ /$rule->{re}/ ) {
+                            $confidence += $rule->{confidence};
+                            if ( $confidence >= 100 ) {
+                                $detected = 1;
+                                last COOKIE_RULE;
                             }
                         }
                     }
@@ -242,7 +248,7 @@ sub detect {
                     # try from most to least relevant method
                     RULES:
                     for my $rule_type ( qw( html url ) ) {
-                        my $rule_name = $rule_type. '_rules';
+                        my $rule_name = $rule_type . '_rules';
                         if ( defined $params{ $rule_type } && exists $app_ref->{ $rule_name } ) {
                             for my $rule ( @{ $app_ref->{ $rule_name } } ) {
                                 if ( $params{ $rule_type } =~ m/$rule->{re}/ ) {
@@ -399,21 +405,13 @@ sub _process_app_techs {
                 push @html_rules, $rule;
             }
         }
-        elsif ( $field eq 'headers' ) {
+        elsif ( $field eq 'headers' || $field eq 'cookies' ) {
             for my $key ( keys %$rule_ref ) {
                 my $rule = _parse_rule( $rule_ref->{ $key } );
                 $rule->{re} = qr/$rule->{re}/;
-                $new_app_ref->{headers_rules}{ lc $key } = $rule;
+                $new_app_ref->{ $field . '_rules' }{ lc $key } = $rule;
             }
         }
-        elsif ( $field eq 'cookies' ) {
-            for my $key ( keys %$rule_ref ) {
-                my $rule = _parse_rule( $rule_ref->{ $key } );
-                $rule->{re} = qr/^$key\s*=\s*$rule->{re};\s/;
-                push @{ $new_app_ref->{cookies_rules} }, $rule;
-            }
-        }
-
     }
 
     if ( @html_rules ) {
@@ -427,11 +425,11 @@ sub _process_app_techs {
 sub _parse_rule {
     my ( $rule ) = @_;
     
-    my ( $re, @params ) = split /\\;/, $rule;
+    my ( $re, @tags ) = split /\\;/, $rule;
     
     my $confidence;
-    for my $param ( @params ) {
-        if ( ( $confidence ) = $param =~ /^\s*confidence\s*:\s*(\d+)\s*$/ ) {
+    for my $tag ( @tags ) {
+        if ( ( $confidence ) = $tag =~ /^\s*confidence\s*:\s*(\d+)\s*$/ ) {
             # supports only confidence for now
             last;
         }

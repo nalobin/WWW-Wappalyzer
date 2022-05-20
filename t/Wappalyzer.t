@@ -2,7 +2,7 @@
 
 use utf8;
 use FindBin qw($Bin);
-use Test::More tests => 21;
+use Test::More tests => 23;
 
 BEGIN {
     use_ok( 'WWW::Wappalyzer' ) || print "Bail out!\n";
@@ -189,9 +189,21 @@ is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header single va
 is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header multi value';
 
 my @cookies = (
+    'ZezzionId=ddd; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
+);
+%detected = $wappalyzer->detect( headers => { 'Set-Cookie' => \@cookies } );
+is_deeply \%detected, { Parkings => [ 'cookies-empty-re' ] }, 'cookies-empty-re';
+
+@cookies = (
     '_ym_d=; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
     'maps_routes_travel_mode=kkk123lll; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
     'skid=; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
 );
 %detected = $wappalyzer->detect( headers => { 'Set-Cookie' => \@cookies } );
-is_deeply \%detected, { Parkings => [ 'cookies-test' ] }, 'cookies';
+is_deeply \%detected, { Parkings => [ 'cookies-simple-re' ] }, 'cookies-simple-re';
+
+@cookies = (
+    '_numeric_session=12345; Expires=Mon, 21-May-2012 12:58:39 GMT; Domain=.yandex.ru; Path=/',
+);
+%detected = $wappalyzer->detect( headers => { 'Set-Cookie' => \@cookies } );
+is_deeply \%detected, { Parkings => [ 'cookies-whole-string-re' ] }, 'cookies-whole-string-re';
