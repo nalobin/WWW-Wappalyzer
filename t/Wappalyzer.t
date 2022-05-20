@@ -182,10 +182,10 @@ eval { $wappalyzer->detect(
 ) };
 ok !$@, 'header skip hashes';
 
-%detected = $wappalyzer->detect( headers => { 'seT-Cookie' => 'C' } );
+%detected = $wappalyzer->detect( headers => { 'seT-Header' => 'C' } );
 is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header single value';
 
-%detected = $wappalyzer->detect( headers => { 'Set-Cookie' => [ 'a', 'b', 'c' ] } );
+%detected = $wappalyzer->detect( headers => { 'Set-Header' => [ 'a', 'b', 'c' ] } );
 is_deeply \%detected, { Parkings => [ 'header-value-test' ] }, 'header multi value';
 
 my @cookies = (

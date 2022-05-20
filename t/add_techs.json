@@ -15,7 +15,7 @@
     },
     "header-value-test": {
         "cats": [ 1000 ],
-        "headers": { "set-cookie": "C" }
+        "headers": { "set-header": "C" }
     },
 
     "cookies-empty-re": {
