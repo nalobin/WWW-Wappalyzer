@@ -15,10 +15,19 @@
     },
     "header-value-test": {
         "cats": [ 1000 ],
-        "headers": {  "set-cookie": "C" }
+        "headers": { "set-cookie": "C" }
     },
-    "cookies-test": {
+
+    "cookies-empty-re": {
         "cats": [ 1000 ],
-        "cookies": {  "maps_routes_travel_mode": "k+[0-9]+l+" }
+        "cookies": { "ZezzionId": "" }
+    },
+    "cookies-simple-re": {
+        "cats": [ 1000 ],
+        "cookies": { "maps_routes_travel_mode": "k+[0-9]+l+" }
+    },
+    "cookies-whole-string-re": {
+        "cats": [ 1000 ],
+        "cookies": { "_numeric_session": "^(?:[\\d]+)$" }
     }
 }
